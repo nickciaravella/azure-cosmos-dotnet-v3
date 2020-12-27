@@ -73,16 +73,11 @@ namespace Microsoft.Azure.Cosmos.Routing
             Debug.Assert(ResourceId.TryParse(collectionResourceId, out collectionRidParsed), "Could not parse CollectionRid from ResourceId.");
 
             CollectionRoutingMap routingMap =
-                await this.TryLookupAsync(collectionResourceId, null, null, CancellationToken.None);
-
-            if (forceRefresh && routingMap != null)
-            {
-                routingMap = await this.TryLookupAsync(collectionResourceId, routingMap, null, CancellationToken.None);
-            }
+                await this.TryLookupAsync(collectionResourceId, null, null, CancellationToken.None, forceRefresh);
 
             if (routingMap == null)
             {
-                DefaultTrace.TraceInformation(string.Format("Routing Map Null for collection: {0}, PartitionKeyRangeId: {1}, forceRefresh:{2}", collectionResourceId, partitionKeyRangeId, forceRefresh));
+                DefaultTrace.TraceInformation(string.Format("Routing Map Null for collection: {0}, PartitionKeyRangeId: {1}, forceRefresh:{2}", collectionResourceId, partitionKeyRangeId, forceRefresh));	
                 return null;
             }
 
@@ -93,15 +88,33 @@ namespace Microsoft.Azure.Cosmos.Routing
             string collectionRid,
             CollectionRoutingMap previousValue,
             DocumentServiceRequest request,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool forceRefresh = false)
         {
             try
             {
-                return await this.routingMapCache.GetAsync(
+                CollectionRoutingMap routingMap = await this.routingMapCache.GetAsync(
                     collectionRid,
                     previousValue,
                     () => this.GetRoutingMapForCollectionAsync(collectionRid, previousValue, cancellationToken),
                     CancellationToken.None);
+
+                if (forceRefresh && routingMap != null)
+                {
+                    routingMap = await this.routingMapCache.GetAsync(
+                         collectionRid,
+                         routingMap,
+                         () => this.GetRoutingMapForCollectionAsync(collectionRid, previousValue, cancellationToken),
+                         CancellationToken.None);
+                }
+
+                if (routingMap == null)
+                {
+                    DefaultTrace.TraceInformation(string.Format("Routing Map Null for collection: {0}, forceRefresh:{1}", collectionRid, forceRefresh));
+                    return null;
+                }
+
+                return routingMap;
             }
             catch (DocumentClientException ex)
             {

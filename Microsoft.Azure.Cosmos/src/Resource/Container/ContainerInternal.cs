@@ -52,7 +52,7 @@ namespace Microsoft.Azure.Cosmos
         public abstract Task<Documents.Routing.PartitionKeyInternal> GetNonePartitionKeyValueAsync(
             CancellationToken cancellationToken);
 
-        public abstract Task<CollectionRoutingMap> GetRoutingMapAsync(CancellationToken cancellationToken);
+        public abstract Task<CollectionRoutingMap> GetRoutingMapAsync(CancellationToken cancellationToken, bool forceRefresh = false);
 
         public abstract Task<TryExecuteQueryResult> TryExecuteQueryAsync(
             QueryFeatures supportedQueryFeatures,
